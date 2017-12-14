@@ -17,7 +17,9 @@ func router() {
 		fmt.Printf("Adding handler for '%s'\n", p.path)
 		//http.HandleFunc(p.path, p.handler)
 		if p.protected {
-			r.Handle(p.path, httpauth.SimpleBasicAuth(creds.username, creds.password)(http.HandlerFunc(p.handler))).Methods(p.method)
+			h := http.HandlerFunc(p.handler)
+			a := httpauth.SimpleBasicAuth(creds.username, creds.password)(h)
+			r.Handle(p.path, a).Methods(p.method)
 		} else {
 			r.HandleFunc(p.path, p.handler).Methods(p.method)
 		}
