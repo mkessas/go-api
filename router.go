@@ -31,11 +31,3 @@ func router() {
 	r.Handle("/", http.FileServer(http.Dir("static")))
 	http.ListenAndServe(":"+strconv.Itoa(port), r)
 }
-
-func test1Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Test 1 handler!")
-}
-
-func test2Handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Test 2 handler!")
-}
