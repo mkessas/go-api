@@ -7,11 +7,18 @@ import (
 
 	"github.com/goji/httpauth"
 	"github.com/gorilla/mux"
+	"github.com/segmentio/kafka-go"
 )
+
+var writerForKafka *kafka.Writer
 
 func router() {
 	r := mux.NewRouter()
-
+	writerForKafka = kafka.NewWriter(kafka.WriterConfig{
+		Brokers:  []string{"localhost:9092"},
+		Topic:    "GlobalExtracgtorTopic",
+		Balancer: &kafka.LeastBytes{},
+	})
 	for _, p := range paths {
 
 		fmt.Printf("Adding handler for '%s'\n", p.path)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,8 +11,8 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/gorilla/mux"
+	"github.com/segmentio/kafka-go"
 )
 
 var creds = Creds{username: "admin", password: "admin"}
@@ -26,40 +27,14 @@ var paths = []Path{
 	{path: "/api/temperature", handler: temperatureHandler, method: "GET", protected: false},
 }
 
-func test(body string, topic string) {
+func writeToKafka(url string, body string) {
+	writerForKafka.WriteMessages(context.Background(),
+		kafka.Message{
+			Key:   []byte(url),
+			Value: []byte(body),
+		},
+	)
 
-	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "127.0.0.1:9092"})
-	if err != nil {
-		panic(err)
-	}
-
-	defer p.Close()
-
-	// Delivery report handler for produced messages
-	go func() {
-		for e := range p.Events() {
-			switch ev := e.(type) {
-			case *kafka.Message:
-				if ev.TopicPartition.Error != nil {
-					fmt.Printf("Delivery failed: %v\n", ev.TopicPartition)
-				} else {
-					fmt.Printf("Delivered message to %v\n", ev.TopicPartition)
-				}
-			}
-		}
-	}()
-
-	// Produce messages to topic (asynchronously)
-	//topic := "myTopic"
-	// for _, word := range []string{"Welcome", "to", "the", "Confluent", "Kafka", "Golang", "client"} {
-	p.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
-		Value:          []byte(body),
-	}, nil)
-	// }
-
-	// Wait for message deliveries
-	p.Flush(15 * 1000)
 }
 func doHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -77,7 +52,7 @@ func doHandler(w http.ResponseWriter, r *http.Request) {
 	if resp.StatusCode == http.StatusOK {
 		bodyBytes, _ := ioutil.ReadAll(resp.Body)
 		bodyString := string(bodyBytes)
-		test(bodyString, "getResponces")
+		writeToKafka(url, bodyString)
 	}
 
 	data, _ := ioutil.ReadAll(resp.Body)
@@ -91,10 +66,9 @@ func test1Handler(w http.ResponseWriter, r *http.Request) {
 func kafkaProducerHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "kicking of kafka producer ")
-	test("test text", "simple_test")
+	writeToKafka("just test", "test text")
 }
 func test2Handler(w http.ResponseWriter, r *http.Request) {
-	//w.WriteHeader(413)
 	w.Header().Set("x-Yes", "Cool")
 	fmt.Fprintf(w, "Test 2 handler!\n")
 
